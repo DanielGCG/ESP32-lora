@@ -27,6 +27,8 @@ void setup() {
   initDisplay();
   loadNotifications();
   
+
+
 }
 
 void loop() {

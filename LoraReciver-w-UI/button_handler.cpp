@@ -71,14 +71,14 @@ void handleButtonLogic() {
         current_FrameCount = 0;
       }
       ui.switchToFrame(current_FrameCount);
-    } else if (currentMenu == 1) {
+    } else if (currentMenu == 1 && notifications.size() > 0) {
       // Lógica de scroll nas notificações
       if ((scrollIndex + 1) < notifications.size()) {
         scrollIndex++;
       } else {
         scrollIndex = 0;
       }
-      ui.setFrames(&submenuNotifications[0], 1);
+      ui.update();
     }
     buttonPressedType = NULL;
   }
@@ -93,27 +93,33 @@ void handleButtonLogic() {
     buttonPressedType = NULL;
   }
 
-  // Lógica para clique longo
   if (buttonPressedType == 3) {
-    Serial.println("Clique longo detectado");
-    if (currentMenu == 0) {
-      if (current_FrameCount == 1) {
-        // Vai para o submenu de notificações
-        ui.setFrames(&submenuNotifications[0], 1);
-        current_FrameCount = 0;
-        currentMenu = 1;  // Atualiza para submenu de notificações
-      }
-    } else if (currentMenu == 1) {
+  Serial.println("Clique longo detectado");
+
+  if (currentMenu == 0) {
+    if (current_FrameCount == 1) {
+      // Vai para o submenu de notificações
+      current_FrameCount = 0;
+      currentMenu = 1;
+      ui.setFrames(&submenuNotifications[0], 1);
+    }
+  } else if (currentMenu == 1) {
+    if (notifications.size() > 0) {
+      // Exclui a notificação selecionada
+      notifications.erase(notifications.begin() + scrollIndex);
+      scrollIndex = 0;
+      saveNotifications();
+
       if (notifications.size() > 0) {
-        // Exclui a notificação selecionada
-        notifications.erase(notifications.begin() + scrollIndex);
-        scrollIndex = 0;
-        saveNotifications();
         ui.setFrames(&submenuNotifications[0], 1);
       } else {
-        Serial.println("Lista de notificações vazia!");
+        // Volta para o menu principal se não houver mais notificações
+        currentMenu = 0;
+        current_FrameCount = 0;
+        ui.setFrames(menus, menuAmount);
+        }
       }
     }
-    buttonPressedType = NULL;
+  buttonPressedType = NULL;  // <- Move para cá
   }
 }

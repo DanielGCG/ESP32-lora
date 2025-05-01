@@ -46,6 +46,7 @@ void updateUI() {
 }
 
 void drawMainFrame(ScreenDisplay *display, DisplayUiState* state, int16_t x, int16_t y) {
+  ui.enableIndicator();
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_16);
   display->drawString(x + 64, y + 32, "Boa noite!");
@@ -68,6 +69,7 @@ void drawNotificationsFrame(ScreenDisplay *display, DisplayUiState* state, int16
 
 // Tela de lista de notificações com scroll
 void drawNotificationsList(ScreenDisplay *display, DisplayUiState* state, int16_t x, int16_t y) {
+  ui.disableIndicator();
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
 
