@@ -25,65 +25,66 @@ void handleButtonLogic() {
   int buttonState = digitalRead(BTN_PIN);
   unsigned long currentTime = millis();
 
+  // Verifica o início do pressionamento do botão
   if (buttonState == LOW && !isButtonPressed) {
-    // Botão foi pressionado
     isButtonPressed = true;
     buttonPressedTime = currentTime;
     longPressDetected = false;
   }
 
+  // Verifica o momento de liberação do botão
   if (buttonState == HIGH && isButtonPressed) {
-    // Botão foi liberado
     isButtonPressed = false;
     buttonReleasedTime = currentTime;
     unsigned long pressDuration = buttonReleasedTime - buttonPressedTime;
 
-    if (pressDuration >= 1500) {
+    if (pressDuration >= 1500) { // Long press
       buttonPressedType = 3;
       longPressDetected = true;
-      waitingForDoubleClick = false; // cancela qualquer tentativa de clique duplo
+      waitingForDoubleClick = false; // Cancela o clique duplo
     } else {
       if (waitingForDoubleClick && (currentTime - lastClickTime <= doubleClickThreshold)) {
+        // Clique duplo detectado
         buttonPressedType = 2;
         waitingForDoubleClick = false;
       } else {
+        // Esperando o segundo clique para um possível clique duplo
         waitingForDoubleClick = true;
         lastClickTime = currentTime;
       }
     }
   }
 
-  // Se passou o tempo do duplo clique e não houve segundo clique
+  // Se não houve clique duplo, e o tempo se passou
   if (waitingForDoubleClick && (currentTime - lastClickTime > doubleClickThreshold)) {
+    // Clique simples detectado
     buttonPressedType = 1;
     waitingForDoubleClick = false;
   }
 
+  // Lógica para clique simples
   if (buttonPressedType == 1){
     Serial.println("Clique simples detectado");
-    // Se estamos no menu principal navegando entre as opções de submenu
-    if (currentMenu == 0){
+    if (currentMenu == 0) {
       current_FrameCount++;
       if (current_FrameCount >= menuAmount) {
         current_FrameCount = 0;
       }
       ui.switchToFrame(current_FrameCount);
-      buttonPressedType = NULL;
-    }
-    // Se estamos no submenu notificações
-    else if (currentMenu == 1){
-      if ((scrollIndex + 1) < notifications.size()){
-        scrollIndex = scrollIndex + 1;
-      }
-      else {
+    } else if (currentMenu == 1) {
+      // Lógica de scroll nas notificações
+      if ((scrollIndex + 1) < notifications.size()) {
+        scrollIndex++;
+      } else {
         scrollIndex = 0;
       }
-      // Recarrega com o scroll
       ui.setFrames(&submenuNotifications[0], 1);
-      buttonPressedType = NULL;
     }
+    buttonPressedType = NULL;
   }
-  if (buttonPressedType == 2){
+
+  // Lógica para clique duplo
+  if (buttonPressedType == 2) {
     Serial.println("Clique duplo detectado");
     // Volta para o menu principal
     ui.setFrames(menus, menuAmount);
@@ -91,34 +92,28 @@ void handleButtonLogic() {
     currentMenu = 0;
     buttonPressedType = NULL;
   }
-  if (buttonPressedType == 3){
+
+  // Lógica para clique longo
+  if (buttonPressedType == 3) {
     Serial.println("Clique longo detectado");
-    if (currentMenu == 0){
-      if (current_FrameCount == 1){
+    if (currentMenu == 0) {
+      if (current_FrameCount == 1) {
         // Vai para o submenu de notificações
         ui.setFrames(&submenuNotifications[0], 1);
         current_FrameCount = 0;
         currentMenu = 1;  // Atualiza para submenu de notificações
-        buttonPressedType = NULL;
       }
-    }
-    else if (currentMenu == 1){
-      if (notifications.size() > 0){
+    } else if (currentMenu == 1) {
+      if (notifications.size() > 0) {
         // Exclui a notificação selecionada
         notifications.erase(notifications.begin() + scrollIndex);
         scrollIndex = 0;
         saveNotifications();
-        // Atualiza a tela de notificações após exclusão
         ui.setFrames(&submenuNotifications[0], 1);
-        buttonPressedType = NULL;
-      }
-      else {
+      } else {
         Serial.println("Lista de notificações vazia!");
-        buttonPressedType = NULL;
       }
     }
+    buttonPressedType = NULL;
   }
-
-    // Voltamos ao valor nulo
-  buttonPressedType = NULL;
 }

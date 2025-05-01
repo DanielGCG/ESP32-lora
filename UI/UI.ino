@@ -1,6 +1,7 @@
 #include "display_manager.h"
 #include "notifications.h"
 #include "button_handler.h"
+#include "lora_notification_reciver.h"
 
 #define Vext 21
 
@@ -20,19 +21,16 @@ void setup() {
   VextON();
   delay(100);
 
-  initButton();
-  addNotification("Olha a notificação! 1");
-  addNotification("Olha a notificação! 2");
-  addNotification("Olha a notificação! 3");
-  addNotification("Olha a notificação! 4");
-  addNotification("Olha a notificação! 5");
-  addNotification("Olha a notificação! 6");
+  setupLoRa();
 
-  loadNotifications();
+  initButton();
   initDisplay();
+  loadNotifications();
+  
 }
 
 void loop() {
+  loopLoRa();
   handleButtonLogic();
   updateUI();
 }
