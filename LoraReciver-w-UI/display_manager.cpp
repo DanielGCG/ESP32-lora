@@ -50,7 +50,6 @@ void drawMainFrame(ScreenDisplay *display, DisplayUiState* state, int16_t x, int
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_16);
   display->drawString(x + 64, y + 32, "Boa noite!");
-  currentMenu = 0;
 }
 
 // Tela de notificações
@@ -63,8 +62,6 @@ void drawNotificationsFrame(ScreenDisplay *display, DisplayUiState* state, int16
   } else {
     display->drawString(x + 64, y + 32, "Sem notificações");
   }
-
-  currentMenu = 0;
 }
 
 // Tela de lista de notificações com scroll
@@ -84,7 +81,6 @@ void drawNotificationsList(ScreenDisplay *display, DisplayUiState* state, int16_
     String prefix = (i == scrollIndex) ? "> " : "  ";
     display->drawString(x + 0, y + 10 + (i - start) * 12, prefix + notifications[i]);
   }
-  currentMenu = 1;
 }
 
 void headerOverlay(ScreenDisplay *display, DisplayUiState* state) {
