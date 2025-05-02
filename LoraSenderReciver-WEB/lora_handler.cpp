@@ -94,7 +94,7 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
     mensagemEscapada.replace("\"", "\\\"");
     String json = "{\"mensagem\":\"" + mensagemEscapada + "\"}";
 
-    http.begin("https://botecors.me/API/lora/lora_recive");
+    http.begin("https://www.botecors.me/API/lora/lora_recive");
     http.addHeader("Content-Type", "application/json");
 
     int code = http.POST(json);
