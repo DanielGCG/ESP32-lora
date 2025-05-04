@@ -3,6 +3,7 @@
 #include "mensagem_handler.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <time.h>
 
 #define RF_FREQUENCY 915000000
 #define TX_OUTPUT_POWER 14
@@ -22,6 +23,9 @@ extern bool lora_idle;
 char rxpacket[BUFFER_SIZE];
 char buffer[BUFFER_SIZE];
 bool lora_idle = true;
+
+String idMensagemAtual = "";
+String mensagemAtual = "";
 
 void processarIrqLoRa() {
   Radio.IrqProcess();
@@ -52,12 +56,12 @@ void configurarLoRa() {
   Radio.Rx(RX_TIMEOUT_VALUE);
 }
 
-void enviarMensagemLoRa(String texto) {
+void enviarMensagemSequenciadaLoRa(String texto) {
   Sequencia sequencia = sequenciarMensagem(texto);
 
   for (int i = 0; i < sequencia.total_pacotes; i++) {
     Pacote p = sequencia.pacotes[i];
-    snprintf(buffer, BUFFER_SIZE, "%d[%d/%d]%s", p.id_mensagem, p.num_pacote, p.total_pacotes, p.texto);
+    snprintf(buffer, BUFFER_SIZE, "%s[%d/%d]%s", p.id_mensagem, p.num_pacote, p.total_pacotes, p.texto);
     Serial.printf("\nEnviando LoRa: %s\n", buffer);
 
     Radio.Send((uint8_t *)buffer, strlen(buffer));
@@ -68,6 +72,18 @@ void enviarMensagemLoRa(String texto) {
     }
   }
 }
+
+void enviarMensagemLoRa(String texto) {
+    Serial.printf("\nEnviando LoRa: %s\n", texto.c_str());
+
+    Radio.Send((uint8_t *)texto.c_str(), strlen(texto.c_str()));
+    lora_idle = false;
+
+    while (!lora_idle) {
+      Radio.IrqProcess();
+    }
+}
+
 
 void OnTxDone() {
   Serial.println("TX concluído.");
@@ -81,6 +97,23 @@ void OnTxTimeout() {
   Radio.Rx(RX_TIMEOUT_VALUE);
 }
 
+void sendTime() {
+  Serial.println("SendTime chamado!");
+  time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
+    char buffer[30];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+
+    enviarMensagemLoRa(buffer);
+}
+
+void storeInDatabase () {
+
+}
+
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   memcpy(rxpacket, payload, size);
   rxpacket[size] = '\0';
@@ -88,28 +121,93 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   Serial.printf("\nRecebido LoRa: %s\n", rxpacket);
   Serial.printf("RSSI: %d dBm, SNR: %d dB\n", rssi, snr);
 
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String mensagemEscapada = String(rxpacket);
-    mensagemEscapada.replace("\"", "\\\"");
-    String json = "{\"mensagem\":\"" + mensagemEscapada + "\"}";
+  String rxString = String(rxpacket);
+  int marcadorInicio = rxString.indexOf('[');
+  int marcadorFim = rxString.indexOf(']');
 
-    http.begin("https://www.botecors.me/API/lora/lora_recive");
-    http.addHeader("Content-Type", "application/json");
-
-    int code = http.POST(json);
-    if (code > 0) {
-      String resposta = http.getString();
-      Serial.printf("HTTP %d: %s\n", code, resposta.c_str());
-    } else {
-      Serial.printf("Erro HTTP: %s\n", http.errorToString(code).c_str());
+  if (marcadorInicio == -1 || marcadorFim == -1) {
+    if (rxString.indexOf("get_tower_time") != -1) {
+      delay(500);
+      sendTime();
     }
+    if (rxString.indexOf("ping_cell") != -1) {
+      delay(500);
+      enviarMensagemLoRa("ping_cell");
+    }
+    if (rxString.indexOf("ping_tower") != -1) {
+      delay(500);
+      enviarMensagemLoRa("pong_tower");
+    }
+  }
+  else {
+  String idRecebido = "";
+  String fragmento = rxString;
 
-    http.end();
-  } else {
-    Serial.println("Wi-Fi desconectado.");
+  // Extrai ID e texto, se possível
+  if (marcadorInicio != -1 && marcadorFim != -1 && marcadorFim > marcadorInicio) {
+    idRecebido = rxString.substring(0, marcadorInicio);
+    fragmento = rxString.substring(marcadorFim + 1);
   }
 
+  // Se mudou o ID, é nova mensagem
+  if (idRecebido.length() > 0 && idRecebido != idMensagemAtual) {
+    Serial.println("Novo ID detectado. Limpando buffer.");
+    idMensagemAtual = idRecebido;
+    mensagemAtual = "";
+  }
+
+  mensagemAtual += fragmento;
+
+  // Verifica marcador [x/y]
+  if (marcadorInicio != -1 && marcadorFim != -1) {
+    String marcador = rxString.substring(marcadorInicio + 1, marcadorFim);
+    int barra = marcador.indexOf('/');
+    if (barra != -1) {
+      int x = marcador.substring(0, barra).toInt();
+      int y = marcador.substring(barra + 1).toInt();
+
+      Serial.printf("Progresso: %d de %d\n", x, y);
+
+      // Se é o último pacote, envia por HTTP
+      if (x == y) {  // Se é o último pacote
+        Serial.println("Último pacote recebido.");
+        Serial.println("Mensagem completa:");
+        Serial.println(mensagemAtual);
+
+        if (WiFi.status() == WL_CONNECTED) {
+            HTTPClient http;
+
+            // Escapa as aspas na mensagem
+            String mensagemEscapada = mensagemAtual;
+            mensagemEscapada.replace("\"", "\\\"");
+
+            // Inclui o ID da mensagem no JSON
+            String json = "{\"mensagem\":\"" + mensagemEscapada + "\", \"mensagemID\":\"" + idRecebido + "\"}";
+
+            http.begin("https://www.botecors.me/API/lora/lora_recive");
+            http.addHeader("Content-Type", "application/json");
+
+            int code = http.POST(json);
+            if (code > 0) {
+                String resposta = http.getString();
+                Serial.printf("HTTP %d: %s\n", code, resposta.c_str());
+            } else {
+                Serial.printf("Erro HTTP: %s\n", http.errorToString(code).c_str());
+            }
+
+            http.end();
+        } else {
+            Serial.println("Wi-Fi desconectado.");
+        }
+
+        // Limpa estado para próxima mensagem
+        mensagemAtual = "";
+        idMensagemAtual = "";
+        }
+      }
+    }
+  }
+  lora_idle = true;
   Radio.Rx(RX_TIMEOUT_VALUE);
 }
 
