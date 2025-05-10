@@ -114,6 +114,22 @@ void storeInDatabase () {
 
 }
 
+void loopLoRa() {
+  if (Serial.available()) {
+    String comando = Serial.readStringUntil('\n');
+    comando.trim();
+    if (comando.startsWith("enviar:")) {
+      String conteudo = comando.substring(7);
+      enviarMensagemSequenciadaLoRa(conteudo);
+    }
+    if (comando.indexOf("ping_cell") != -1) {
+      delay(500);
+      enviarMensagemLoRa("pong_cell");
+    }
+  }
+  Radio.IrqProcess();
+}
+
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   memcpy(rxpacket, payload, size);
   rxpacket[size] = '\0';
@@ -129,10 +145,6 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
     if (rxString.indexOf("get_tower_time") != -1) {
       delay(500);
       sendTime();
-    }
-    if (rxString.indexOf("ping_cell") != -1) {
-      delay(500);
-      enviarMensagemLoRa("ping_cell");
     }
     if (rxString.indexOf("ping_tower") != -1) {
       delay(500);

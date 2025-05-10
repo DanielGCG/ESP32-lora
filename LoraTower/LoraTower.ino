@@ -12,11 +12,5 @@ void setup() {
 }
 
 void loop() {
-  processarIrqLoRa();
-
-  if (lora_idle && Serial.available()) {
-    String texto = Serial.readStringUntil('\n');
-    texto.trim();
-    enviarMensagemSequenciadaLoRa(texto);
-  }
+  loopLoRa();
 }

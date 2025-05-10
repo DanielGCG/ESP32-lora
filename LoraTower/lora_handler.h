@@ -8,6 +8,7 @@ extern bool lora_idle;
 
 void processarIrqLoRa();
 void configurarLoRa();
+void loopLoRa();
 void enviarMensagemSequenciadaLoRa(String texto);
 void enviarMensagemLoRa(String texto);
 
