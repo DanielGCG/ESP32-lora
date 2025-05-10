@@ -1,11 +1,12 @@
 // display_manager.cpp
 #include "display_manager.h"
 #include "notifications.h"
+#include "status_handler.h"
 
 extern SSD1306Wire myDisplay;
 DisplayUi ui(&myDisplay);
 
-int wifiSignalStrength = 3;
+int loraSignalStrength = 0;
 
 const uint8_t activeSymbol[] = { 0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C };
 const uint8_t inactiveSymbol[] = { 0x00, 0x3C, 0x42, 0x81, 0x81, 0x81, 0x42, 0x3C };
@@ -17,6 +18,23 @@ OverlayCallback overlays[] = { headerOverlay };
 extern int currentMenu;
 extern int current_FrameCount;
 
+
+void setloraSignalStrength(int rssi, int snr) {
+  int nivelRSSI = 0;
+  if (rssi > -70) nivelRSSI = 3;
+  else if (rssi > -90) nivelRSSI = 2;
+  else if (rssi > -110) nivelRSSI = 1;
+  else nivelRSSI = 0;
+
+  int nivelSNR = 0;
+  if (snr > 7) nivelSNR = 3;
+  else if (snr > 0) nivelSNR = 2;
+  else if (snr > -5) nivelSNR = 1;
+  else nivelSNR = 0;
+
+  // Usa o menor entre os dois níveis como sinal final
+  loraSignalStrength = min(nivelRSSI, nivelSNR);
+}
 
 void initDisplay() {
   ui.setTargetFPS(60);
@@ -90,7 +108,7 @@ void headerOverlay(ScreenDisplay *display, DisplayUiState* state) {
   display->setFont(ArialMT_Plain_10);
 
   for (int i = 0; i < 3; i++) {
-    if (i < wifiSignalStrength) {
+    if (i < loraSignalStrength) {
       display->fillRect(2 + i * 4, 10 - i * 3, 3, i * 3 + 2);
     } else {
       display->drawRect(2 + i * 4, 10 - i * 3, 3, i * 3 + 2);
@@ -101,6 +119,6 @@ void headerOverlay(ScreenDisplay *display, DisplayUiState* state) {
   display->drawString(64, 0, "(!)  " + String(notifications.size()));
 
   display->setTextAlignment(TEXT_ALIGN_RIGHT);
-  display->drawString(128, 0, String(millis() / 1000) + "s");
+  display->drawString(128, 0, obterHorario());
 }
 

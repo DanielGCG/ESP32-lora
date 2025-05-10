@@ -2,9 +2,11 @@
 #include "mensagem_handler.h"
 #include "lora_notification_reciver.h"
 #include "notifications.h"
+#include "status_handler.h"
+#include "display_manager.h"
 
 #define RF_FREQUENCY                915000000 // Hz
-#define TX_OUTPUT_POWER             14        // dBm
+#define TX_OUTPUT_POWER             22        // dBm
 #define LORA_BANDWIDTH              0         
 #define LORA_SPREADING_FACTOR       7         
 #define LORA_CODINGRATE             1         
@@ -97,16 +99,14 @@ void loopLoRa() {
     String comando = Serial.readStringUntil('\n');
     comando.trim();
     if (comando.startsWith("enviar:")) {
-      String conteudo = comando.substring(7);
+      String conteudo = comando.substring(8);
       enviarMensagemSequenciadaLoRa(conteudo);
     }
     if (comando.startsWith("ping_tower")) {
-      String conteudo = comando.substring(7);
-      enviarMensagemLoRa("ping_tower");
+      enviarMensagemLoRa("!ping_tower");
     }
     if (comando.startsWith("get_tower_time")) {
-      String conteudo = comando.substring(7);
-      enviarMensagemLoRa("get_tower_time");
+      enviarMensagemLoRa("!get_tower_time");
     }
   }
   Radio.IrqProcess();
@@ -117,6 +117,7 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   rxpacket[size] = '\0';
 
   Serial.printf("\nRecebido LoRa: %s\n", rxpacket);
+  setloraSignalStrength(rssi, snr);
   Serial.printf("RSSI: %d dBm, SNR: %d dB\n", rssi, snr);
 
   String rxString = String(rxpacket);
@@ -124,9 +125,12 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   int marcadorFim = rxString.indexOf(']');
 
   if (marcadorInicio == -1 || marcadorFim == -1) {
-    if (rxString.indexOf("ping_cell") != -1) {
-      delay(500);
-      enviarMensagemLoRa("pong_cell");
+    if (rxString.indexOf("!ping_cell") != -1) {
+      enviarMensagemLoRa("!pong_cell");
+    }
+    if (rxString.indexOf("!date") != -1) {
+      String data = rxString.substring(6);
+      recebeData(data);
     }
   }
   else {

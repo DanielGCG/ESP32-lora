@@ -1,6 +1,5 @@
 #include "mensagem_handler.h"
 
-
 String gerarCodigo() {
   String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?";
   String codigo = "";

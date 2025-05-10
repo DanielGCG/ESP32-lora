@@ -3,6 +3,7 @@
 #include "wifi_handler.h"
 #include "mensagem_handler.h"
 #include "display_handler.h"
+#include "database_handler.h"
 
 void setup() {
   Serial.begin(115200);
