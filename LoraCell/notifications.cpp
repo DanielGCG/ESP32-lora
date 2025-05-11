@@ -40,3 +40,11 @@ void addNotification(String notif) {
   notifications.push_back(notif);
   saveNotifications();
 }
+
+void clearAllNotifications() {
+  notifications.clear();  // Limpa a lista em memória
+  preferences.begin("notif", false);
+  preferences.remove("list");  // Remove a chave armazenada no NVS
+  preferences.end();
+  Serial.println("Todas as notificações foram deletadas!");
+}

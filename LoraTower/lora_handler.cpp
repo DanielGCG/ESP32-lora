@@ -20,6 +20,7 @@ extern bool lora_idle;
 
 char rxpacket[BUFFER_SIZE];
 char buffer[BUFFER_SIZE];
+int16_t rxSize;
 bool lora_idle = true;
 
 String idMensagemAtual = "";
@@ -55,18 +56,77 @@ void configurarLoRa() {
 }
 
 void enviarMensagemSequenciadaLoRa(String texto) {
+  // Limpa as variáveis para evitar resquícios
+  mensagemAtual = "";
+  idMensagemAtual = "";
+
   Sequencia sequencia = sequenciarMensagem(texto);
+  Serial.printf("Total de pacotes: %d\n", sequencia.total_pacotes);
 
   for (int i = 0; i < sequencia.total_pacotes; i++) {
     Pacote p = sequencia.pacotes[i];
-    snprintf(buffer, BUFFER_SIZE, "%s[%d/%d]%s", p.id_mensagem, p.num_pacote, p.total_pacotes, p.texto);
-    Serial.printf("\nEnviando LoRa: %s\n", buffer);
 
+    char numPacoteStr[3];
+    char totalPacotesStr[3];
+    snprintf(numPacoteStr, sizeof(numPacoteStr), "%02d", p.num_pacote);
+    snprintf(totalPacotesStr, sizeof(totalPacotesStr), "%02d", p.total_pacotes);
+    snprintf(buffer, BUFFER_SIZE, "%s[%s/%s]%s", p.id_mensagem.c_str(), numPacoteStr, totalPacotesStr, p.texto);
+
+    Serial.printf("\nEnviando LoRa: %s\n", buffer);
     Radio.Send((uint8_t *)buffer, strlen(buffer));
     lora_idle = false;
 
-    while (!lora_idle) {
-      Radio.IrqProcess();
+    int tentativas = 0;
+    bool sucesso = false;
+
+    // Espera entre os pacotes para evitar sobrecarga
+    delay(100);
+
+    while (!sucesso && tentativas < 3) {
+      unsigned long startTime = millis();
+      bool recebeuAlgo = false;
+
+      while (millis() - startTime < 5000) {  // Espera até 5s por resposta
+        if (!lora_idle) {
+          Radio.IrqProcess();
+        }
+
+        if (rxSize > 0) {
+          String resposta = String(rxpacket);
+          String esperado = "ACK" + p.id_mensagem + "[" + numPacoteStr + "/" + totalPacotesStr + "]";
+          Serial.printf("Resposta recebida: %s\n", resposta.c_str());
+
+          if (resposta.startsWith(esperado)) {
+            sucesso = true;
+            Serial.println("Confirmação recebida corretamente.");
+            break;
+          } else {
+            Serial.println("Confirmação incorreta recebida.");
+          }
+
+          rxSize = 0;
+          recebeuAlgo = true;
+        }
+
+        delay(100);
+      }
+
+      if (!sucesso) {
+        tentativas++;
+        if (!recebeuAlgo)
+          Serial.printf("Nenhuma resposta, tentativa %d de 3...\n", tentativas);
+        else
+          Serial.printf("Resposta inesperada, tentativa %d de 3...\n", tentativas);
+
+        // Reenvia o mesmo pacote
+        Radio.Send((uint8_t *)buffer, strlen(buffer));
+        lora_idle = false;
+      }
+    }
+
+    if (!sucesso) {
+      Serial.println("Falha ao confirmar pacote após 3 tentativas. Abortando envio.");
+      break;
     }
   }
 }
@@ -121,6 +181,9 @@ void loopLoRa() {
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
+  memset(rxpacket, 0, BUFFER_SIZE);
+  rxSize = 0;
+
   memcpy(rxpacket, payload, size);
   rxpacket[size] = '\0';
 
@@ -128,59 +191,82 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   Serial.printf("RSSI: %d dBm, SNR: %d dB\n", rssi, snr);
 
   String rxString = String(rxpacket);
+
+  // Ignora confirmações
+  if (rxString.startsWith("ACK")) {
+    Serial.println("Confirmação recebida. Ignorando processamento.");
+    lora_idle = true;
+    Radio.Rx(RX_TIMEOUT_VALUE);
+    return;
+  }
+
   int marcadorInicio = rxString.indexOf('[');
   int marcadorFim = rxString.indexOf(']');
 
   if (marcadorInicio == -1 || marcadorFim == -1) {
     if (rxString.indexOf("!get_tower_time") != -1) {
-      delay(500);
+      delay(100);
       sendTime();
     }
     if (rxString.indexOf("!ping_tower") != -1) {
-      delay(500);
+      delay(100);
       enviarMensagemLoRa("!pong_tower");
     }
-  }
-  else {
-  String idRecebido = "";
-  String fragmento = rxString;
+  } else {
+    String idRecebido = "";
+    String fragmento = rxString;
 
-  // Extrai ID e texto, se possível
-  if (marcadorInicio != -1 && marcadorFim != -1 && marcadorFim > marcadorInicio) {
-    idRecebido = rxString.substring(0, marcadorInicio);
-    fragmento = rxString.substring(marcadorFim + 1);
-  }
+    // Extrai ID e texto, se possível
+    if (marcadorInicio != -1 && marcadorFim != -1 && marcadorFim > marcadorInicio) {
+      idRecebido = rxString.substring(0, marcadorInicio);
+      fragmento = rxString.substring(marcadorFim + 1);
+    }
 
-  // Se mudou o ID, é nova mensagem
-  if (idRecebido.length() > 0 && idRecebido != idMensagemAtual) {
-    Serial.println("Novo ID detectado. Limpando buffer.");
-    idMensagemAtual = idRecebido;
-    mensagemAtual = "";
-  }
+    // Se mudou o ID, é nova mensagem
+    if (idRecebido.length() > 0 && idRecebido != idMensagemAtual) {
+      Serial.println("Novo ID detectado. Limpando buffer.");
+      idMensagemAtual = idRecebido;
+      mensagemAtual = "";
+    }
 
-  mensagemAtual += fragmento;
+    mensagemAtual += fragmento;
 
-  // Verifica marcador [x/y]
-  if (marcadorInicio != -1 && marcadorFim != -1) {
-    String marcador = rxString.substring(marcadorInicio + 1, marcadorFim);
-    int barra = marcador.indexOf('/');
-    if (barra != -1) {
-      int x = marcador.substring(0, barra).toInt();
-      int y = marcador.substring(barra + 1).toInt();
+    // Verifica marcador [x/y] no formato "01/99"
+    if (marcadorInicio != -1 && marcadorFim != -1) {
+      String marcador = rxString.substring(marcadorInicio + 1, marcadorFim);
+      int barra = marcador.indexOf('/');
+      if (barra != -1) {
+        String strX = marcador.substring(0, barra); // Número do pacote
+        String strY = marcador.substring(barra + 1); // Total de pacotes
+        
+        int x = strX.toInt(); // Pacote atual
+        int y = strY.toInt(); // Total de pacotes
 
-      Serial.printf("Progresso: %d de %d\n", x, y);
+        Serial.printf("Progresso: %d de %d\n", x, y);
 
-      // Se é o último pacote
-      if (x == y) {  // Se é o último pacote
-        Serial.println("Último pacote recebido.");
-        Serial.println("Mensagem completa:");
-        Serial.println(mensagemAtual);
+        // Se é o último pacote
+        if (x == y) {  // Se é o último pacote
+          Serial.println("Último pacote recebido.");
+          Serial.println("Mensagem completa:");
+          Serial.println(mensagemAtual);
 
-        enviarParaDatabase(mensagemAtual, idMensagemAtual);
+          // Envia confirmação de recebimento
+          String confirmacao = "ACK" + idRecebido + "[" + strX + "/" + strY + "]";
+          Serial.printf("Enviando confirmação: %s\n", confirmacao.c_str());
 
-        // Limpa estado para próxima mensagem
-        mensagemAtual = "";
-        idMensagemAtual = "";
+          delay(100);
+          enviarMensagemLoRa(confirmacao);
+
+          enviarParaDatabase(mensagemAtual, idMensagemAtual);
+
+          // Limpa estado para próxima mensagem
+          mensagemAtual = "";
+          idMensagemAtual = "";
+        } else {
+          // Envia confirmação de recebimento do pacote atual
+          String confirmacao = "ACK" + idRecebido + "[" + strX + "/" + strY + "]";
+          Serial.printf("Enviando confirmação: %s\n", confirmacao.c_str());
+          enviarMensagemLoRa(confirmacao);
         }
       }
     }

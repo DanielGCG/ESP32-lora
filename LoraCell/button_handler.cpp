@@ -64,7 +64,6 @@ void handleButtonLogic() {
 
   // Lógica para clique simples
   if (buttonPressedType == 1){
-    Serial.println("Clique simples detectado");
     if (currentMenu == 0) {
       current_FrameCount++;
       if (current_FrameCount >= menuAmount) {
@@ -85,7 +84,6 @@ void handleButtonLogic() {
 
   // Lógica para clique duplo
   if (buttonPressedType == 2) {
-    Serial.println("Clique duplo detectado");
     // Volta para o menu principal
     ui.setFrames(menus, menuAmount);
     current_FrameCount = 0;
@@ -94,8 +92,6 @@ void handleButtonLogic() {
   }
 
   if (buttonPressedType == 3) {
-  Serial.println("Clique longo detectado");
-
   if (currentMenu == 0) {
     if (current_FrameCount == 1) {
       // Vai para o submenu de notificações

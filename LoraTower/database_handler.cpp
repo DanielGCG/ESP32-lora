@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <time.h>
+#include <Arduino.h>
 
 
 void enviarParaDatabase(String mensagem, String idRecebido) {

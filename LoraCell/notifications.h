@@ -10,3 +10,4 @@ extern const int maxVisibleNotifications;
 void saveNotifications();
 void loadNotifications();
 void addNotification(String notif);
+void clearAllNotifications();
