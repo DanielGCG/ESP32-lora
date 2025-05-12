@@ -8,8 +8,8 @@
 void setup() {
   Serial.begin(115200);
   iniciarWiFi();
-  configurarLoRa();
-  configTzTime("America/Sao_Paulo", "pool.ntp.org");
+  setupLoRa();
+  configurarTempoNTP();
 }
 
 void loop() {

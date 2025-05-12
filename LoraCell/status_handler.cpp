@@ -12,6 +12,7 @@ int ultimoMinuto = -1;
 void recebeData(String data) {
   timestamp = atoll(data.c_str());
   ultimoMinuto = -1;
+  Serial.println("Horário recebido.");
 }
 
 String obterHorario() {

@@ -14,6 +14,5 @@ void setupLoRa();
 void loopLoRa();
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr);
 void OnTxDone(void);
-void sendMessage(String msg);
 
 #endif

@@ -7,7 +7,6 @@ String gerarCodigo() {
     int indice = random(caracteres.length());
     codigo += caracteres[indice];
   }
-  
   return codigo;
 }
 

@@ -6,10 +6,10 @@
 
 extern bool lora_idle;
 
-void processarIrqLoRa();
-void configurarLoRa();
+void setupLoRa();
 void loopLoRa();
-void enviarMensagemSequenciadaLoRa(String texto);
+void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr);
+void OnTxDone(void);
 void enviarMensagemLoRa(String texto);
 
 #endif

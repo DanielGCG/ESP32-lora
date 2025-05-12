@@ -5,5 +5,7 @@
 #include "LoRaWan_APP.h"
 
 void enviarParaDatabase(String mensagem, String idRecebido);
+void sendTime();
+void configurarTempoNTP();
 
 #endif
