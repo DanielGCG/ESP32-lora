@@ -22,6 +22,11 @@ String mensagens_boas_vindas[4] = {
   "Boa noite!",
 };
 
+
+unsigned long lastScrollTime = 0;
+int scrollOffset = 0;
+const int scrollSpeed = 50; // ms entre atualizações
+
 extern int num_mensagem_boas_vindas = 0; // Padrão é apenas "olá!"
 extern int currentMenu;
 extern int current_FrameCount;
@@ -105,7 +110,26 @@ void drawNotificationsList(ScreenDisplay *display, DisplayUiState* state, int16_
 
   for (int i = start; i < end; i++) {
     String prefix = (i == scrollIndex) ? "> " : "  ";
-    display->drawString(x + 0, y + 10 + (i - start) * 12, prefix + notifications[i]);
+    String message = prefix + notifications[i];
+    int yOffset = y + 10 + (i - start) * 12;
+
+    if (i == scrollIndex) {
+      int16_t textWidth = display->getStringWidth(message);
+      if (textWidth > 128) {
+        // Atualiza o scroll somente se tempo passou
+        if (millis() - lastScrollTime > scrollSpeed) {
+          scrollOffset++;
+          if (scrollOffset > textWidth) scrollOffset = -128;
+          lastScrollTime = millis();
+        }
+        display->drawString(x - scrollOffset, yOffset, message);
+      } else {
+        scrollOffset = 0; // Reset se não precisar de scroll
+        display->drawString(x, yOffset, message);
+      }
+    } else {
+      display->drawString(x, yOffset, message);
+    }
   }
 }
 
