@@ -22,7 +22,7 @@ void enviarParaDatabase(String mensagem, String idRecebido) {
     // Inclui o ID da mensagem no JSON
     String json = "{\"mensagem\":\"" + mensagemEscapada + "\", \"mensagemID\":\"" + idRecebido + "\"}";
 
-    http.begin("http://192.168.1.2:3000/API/lora/lora_recive");
+    http.begin("https://www.botecors.me/API/lora/lora_recive");
     http.addHeader("Content-Type", "application/json");
 
     int code = http.POST(json);
@@ -79,7 +79,7 @@ void atualizarNotificacao(String mensagemID, String novoStatus) {
 
     String json = "{\"mensagemID\":\"" + mensagemID + "\", \"status\":\"" + novoStatus + "\"}";
 
-    http.begin("http://192.168.1.2:3000/API/lora/lora_notifications");
+    http.begin("https://www.botecors.me/API/lora/lora_notifications");
     http.addHeader("Content-Type", "application/json");
 
     int code = http.sendRequest("PATCH", json);
@@ -100,7 +100,7 @@ void receberNotificacoes() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
 
-    http.begin("http://192.168.1.2:3000/API/lora/lora_notifications");
+    http.begin("https://www.botecors.me/API/lora/lora_notifications");
     http.addHeader("Content-Type", "application/json");
 
     int code = http.GET();
