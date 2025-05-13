@@ -1,7 +1,7 @@
 #include "mensagem_handler.h"
 
 String gerarCodigo() {
-  String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@%^&*()_-+=<>?";
+  String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   String codigo = "";
   for (int i = 0; i < 8; i++) {
     int indice = random(caracteres.length());

@@ -134,8 +134,11 @@ void loopLoRa() {
     if (comando.indexOf("ping_cell") != -1) {
       enviarMensagemLoRa("!ping_cell");
     }
+    if (comando.indexOf("req_not") != -1) {
+      receberNotificacoes();
+    }
   }
-  
+
   verificaConfirmacao();
   Radio.IrqProcess();
 }
