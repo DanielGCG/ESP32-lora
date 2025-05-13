@@ -15,6 +15,14 @@ FrameCallback menus[] = { drawMainFrame, drawNotificationsFrame };
 FrameCallback submenuNotifications[] = { drawNotificationsList };
 OverlayCallback overlays[] = { headerOverlay };
 
+String mensagens_boas_vindas[4] = {
+  "Olá!",
+  "Bom dia!",
+  "Boa tarde!",
+  "Boa noite!",
+};
+
+extern int num_mensagem_boas_vindas = 0; // Padrão é apenas "olá!"
 extern int currentMenu;
 extern int current_FrameCount;
 
@@ -67,7 +75,7 @@ void drawMainFrame(ScreenDisplay *display, DisplayUiState* state, int16_t x, int
   ui.enableIndicator();
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_16);
-  display->drawString(x + 64, y + 32, "Boa noite!");
+  display->drawString(x + 64, y + 32, mensagens_boas_vindas[num_mensagem_boas_vindas]);
 }
 
 // Tela de notificações

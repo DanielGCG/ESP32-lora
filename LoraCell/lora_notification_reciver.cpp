@@ -141,7 +141,10 @@ void loopLoRa() {
       Serial.println("Requisitando horário...");
       enviarMensagemLoRa("!get_tower_time");
     }
-    if (comando.startsWith("delAllNot")) {
+    if (comando.startsWith("req_not")) {
+      enviarMensagemLoRa("!req_not");
+    }
+    if (comando.startsWith("del_all_Not")) {
       clearAllNotifications();
     }
   }

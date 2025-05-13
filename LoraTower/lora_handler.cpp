@@ -1,6 +1,7 @@
 #include "lora_handler.h"
 #include "mensagem_handler.h"
 #include "database_handler.h"
+#include <queue>
 
 #define RF_FREQUENCY 915000000
 #define TX_OUTPUT_POWER 22
@@ -29,6 +30,9 @@ String idMensagemAtual = "";
 String esperandoAckDe = "";
 bool aguardandoConfirmacao = false;
 
+std::queue<Sequencia> filaMensagens;
+
+bool processandoSequencia = false;
 Sequencia sequenciaAtual;
 int pacoteAtualIndex = 0;
 int tentativasPacoteAtual = 0;
@@ -84,19 +88,33 @@ void enviarMensagemLoRa(String texto) {
 }
 
 void enviarMensagemSequenciadaLoRa(String texto) {
-  mensagemAtual = "";
-  idMensagemAtual = "";
-  aguardandoConfirmacao = true;
+  Sequencia nova = sequenciarMensagem(texto);
+  filaMensagens.push(nova);
+}
 
-  sequenciaAtual = sequenciarMensagem(texto);
-  pacoteAtualIndex = 0;
-  tentativasPacoteAtual = 0;
-  tempoUltimoEnvio = 0;
+void iniciarProximaSequencia() {
+  if (!filaMensagens.empty()) {
+    sequenciaAtual = filaMensagens.front();
+    filaMensagens.pop();
 
-  Serial.printf("Total de pacotes: %d\n", sequenciaAtual.total_pacotes);
+    pacoteAtualIndex = 0;
+    tentativasPacoteAtual = 0;
+    tempoUltimoEnvio = 0;
+    aguardandoConfirmacao = true;
+    processandoSequencia = true;
+
+    Serial.printf("Iniciando nova sequência com %d pacotes\n", sequenciaAtual.total_pacotes);
+  } else {
+    processandoSequencia = false;
+  }
 }
 
 void verificaConfirmacao() {
+  if (!aguardandoConfirmacao && !processandoSequencia && !filaMensagens.empty()) {
+    iniciarProximaSequencia();
+    return;
+  }
+
   if (!aguardandoConfirmacao || pacoteAtualIndex >= sequenciaAtual.total_pacotes) return;
 
   if (millis() - tempoUltimoEnvio >= 5000 || tentativasPacoteAtual == 0) {
@@ -119,6 +137,7 @@ void verificaConfirmacao() {
     if (tentativasPacoteAtual >= 3) {
       Serial.println("Falha ao receber confirmação após 3 tentativas.");
       aguardandoConfirmacao = false;
+      iniciarProximaSequencia();  // Vai para a próxima da fila
     }
   }
 }
@@ -159,12 +178,14 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
       esperandoAckDe = "";
       tentativasPacoteAtual = 0;
       pacoteAtualIndex++;
-
       if (pacoteAtualIndex < sequenciaAtual.total_pacotes) {
         aguardandoConfirmacao = true;
         tempoUltimoEnvio = 0;
       } else {
         Serial.println("Todos os pacotes enviados com sucesso!\n");
+        aguardandoConfirmacao = false;
+        processandoSequencia = false;
+        iniciarProximaSequencia();
       }
     }
 
@@ -174,6 +195,9 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
     }
     if (rxString.indexOf("!ping_tower") != -1) {
       enviarMensagemLoRa("!pong_tower");
+    }
+    if (rxString.indexOf("!req_not") != -1) {
+      receberNotificacoes();
     }
     if (rxString.indexOf("!pong_cell") != -1) {
       Serial.printf("\nPong from cell! RSSI: %d dBm  |  SNR: %d\n", rssi, snr);

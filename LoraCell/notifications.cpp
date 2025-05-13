@@ -24,6 +24,8 @@ void loadNotifications() {
   preferences.end();
   notifications.clear();
 
+  if (serialized.length() == 0) return;
+
   int start = 0;
   while (true) {
     int idx = serialized.indexOf('\n', start);
@@ -42,6 +44,11 @@ void addNotification(String notif) {
 }
 
 void clearAllNotifications() {
+  if (notifications.empty()) {
+    Serial.println("Nenhuma notificação para deletar.");
+    return;
+  }
+
   notifications.clear();  // Limpa a lista em memória
   preferences.begin("notif", false);
   preferences.remove("list");  // Remove a chave armazenada no NVS

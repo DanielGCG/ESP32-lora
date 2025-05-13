@@ -106,7 +106,7 @@ void receberNotificacoes() {
     int code = http.GET();
     if (code > 0) {
       String resposta = http.getString();
-      Serial.println("Recebido Notificações e enviando por LoRa...");
+      Serial.println("Recebido Notificações e empilhando para envio por LoRa...");
 
       StaticJsonDocument<2048> doc;
 
@@ -119,14 +119,24 @@ void receberNotificacoes() {
 
       JsonArray notificacoes = doc.as<JsonArray>();
 
+      std::vector<String> pilha;
+
+      // Empilha todas as mensagens com status "enviada"
       for (JsonObject notificacao : notificacoes) {
         String mensagem = notificacao["mensagem"];
         String status = notificacao["status"];
 
         if (status == "enviada") {
-          Serial.printf("Enviando mensagem: %s\n", mensagem.c_str());
-          enviarMensagemSequenciadaLoRa(mensagem);
+          pilha.push_back(mensagem);
         }
+      }
+
+      // Desempilha e envia as mensagens
+      while (!pilha.empty()) {
+        String mensagem = pilha.back();
+        pilha.pop_back();
+        Serial.printf("Enviando mensagem (PILHA): %s\n", mensagem.c_str());
+        enviarMensagemSequenciadaLoRa(mensagem);
       }
 
     } else {
