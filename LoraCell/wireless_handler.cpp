@@ -1,16 +1,27 @@
-#include "BluetoothSerial.h"
+/*#include "BluetoothSerial.h"
 
 BluetoothSerial SerialBT;
 
-void setup_bluetooth() {
-  SerialBT.begin("ESP32_BT"); // Nome do dispositivo Bluetooth
-  Serial.println("Bluetooth iniciado. Pronto para emparelhar.");
+void setupBluetooth() {
+  Serial.println("Iniciando Bluetooth...");
+
+  SerialBT.begin("CelulaLora");  // Modo sem PIN
+
+  Serial.println("Bluetooth iniciado. Emparelhe sem PIN.");
 }
 
-void loop() {
+void loopBluetooth() {
+  // Se recebeu algo via Bluetooth → envia para USB Serial
   if (SerialBT.available()) {
     char c = SerialBT.read();
-    Serial.print("Recebido via BT: ");
-    Serial.println(c);
+    Serial.write(c);
   }
-}
+
+  // Se recebeu algo via USB Serial → envia para Bluetooth (se conectado)
+  if (Serial.available()) {
+    char c = Serial.read();
+    if (SerialBT.hasClient()) {
+      SerialBT.write(c);
+    }
+  }
+}*/

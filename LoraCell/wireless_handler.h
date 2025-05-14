@@ -1,0 +1,2 @@
+void setupBluetooth();
+void loopBluetooth();

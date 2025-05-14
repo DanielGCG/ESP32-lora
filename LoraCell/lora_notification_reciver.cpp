@@ -144,7 +144,7 @@ void loopLoRa() {
     if (comando.startsWith("req_not")) {
       enviarMensagemLoRa("!req_not");
     }
-    if (comando.startsWith("del_all_Not")) {
+    if (comando.startsWith("del_all_not")) {
       clearAllNotifications();
     }
   }
