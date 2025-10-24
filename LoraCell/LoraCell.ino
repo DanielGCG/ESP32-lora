@@ -9,7 +9,7 @@
 
 int current_FrameCount = 0;
 int currentMenu = 0;
-int menuAmount = 2;
+int menuAmount = 3;
 long long timestamp = 0;
 
 SSD1306Wire myDisplay(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
@@ -29,6 +29,8 @@ void setup() {
   initButton();
   initDisplay();
   loadNotifications();
+
+  resetInactivityTimer();
 }
 
 void loop() {
@@ -36,4 +38,8 @@ void loop() {
   loopLoRa();
   handleButtonLogic();
   updateUI();
+
+  if (millis() - lastActivity >= 20000UL) {
+    enterDeepSleep();
+  }
 }

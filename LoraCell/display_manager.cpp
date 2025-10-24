@@ -11,9 +11,10 @@ int loraSignalStrength = 0;
 const uint8_t activeSymbol[] = { 0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C };
 const uint8_t inactiveSymbol[] = { 0x00, 0x3C, 0x42, 0x81, 0x81, 0x81, 0x42, 0x3C };
 
-FrameCallback menus[] = { drawMainFrame, drawNotificationsFrame };
-FrameCallback submenuNotifications[] = { drawNotificationsList };
-OverlayCallback overlays[] = { headerOverlay };
+extern FrameCallback menus[] = { drawMainFrame, drawNotificationsFrame, drawRequestsFrame };
+extern FrameCallback submenuNotifications[] = { drawNotificationsList };
+extern FrameCallback submenuRequests[] = { drawRequestOptionsFrame };
+extern OverlayCallback overlays[] = { headerOverlay };
 
 String mensagens_boas_vindas[4] = {
   "Olá!",
@@ -63,12 +64,17 @@ void initDisplay() {
 }
 
 void setMainFrames() {
-  ui.setFrames(menus, 2);
+  ui.setFrames(menus, 3);
   ui.enableIndicator();
 }
 
 void setNotificationListFrame() {
   ui.setFrames(submenuNotifications, 1);
+  ui.disableIndicator();
+}
+
+void setRequestListFrame() {
+  ui.setFrames(submenuRequests, 1);
   ui.disableIndicator();
 }
 
@@ -93,6 +99,14 @@ void drawNotificationsFrame(ScreenDisplay *display, DisplayUiState* state, int16
   } else {
     display->drawString(x + 64, y + 32, "Sem notificações");
   }
+}
+
+// Tela de requisições
+void drawRequestsFrame(ScreenDisplay *display, DisplayUiState* state, int16_t x, int16_t y) {
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  display->setFont(ArialMT_Plain_16);
+
+  display->drawString(x + 64, y + 32, "Requisições");
 }
 
 // Tela de lista de notificações com scroll
@@ -129,6 +143,65 @@ void drawNotificationsList(ScreenDisplay *display, DisplayUiState* state, int16_
       }
     } else {
       display->drawString(x, yOffset, message);
+    }
+  }
+}
+
+const int totalRequestOptions = 3;
+const String requestOptions[totalRequestOptions] = {
+  "req horário",
+  "ping tower",
+  "ping cell"
+};
+
+// --- Função de desenho de lista de requisições com scroll ---
+void drawRequestOptionsFrame(ScreenDisplay *display, DisplayUiState* state, int16_t x, int16_t y) {
+  ui.disableIndicator();
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->setFont(ArialMT_Plain_10);
+
+  int totalOptions = 3;
+  int start = max(0, scrollIndex - (4 / 2));
+  int end = min(start + 4, totalOptions);
+
+  if (end - start < 4 && start > 0) {
+    start = max(0, end - 4);
+  }
+
+  for (int i = start; i < end; i++) {
+    String prefix = (i == scrollIndex) ? "> " : "  ";
+    String option = "";
+
+    if (i == 0) {
+      option = prefix + "req horário";
+    }
+    if (i == 1) {
+      option = prefix + "req notif";
+    }
+    if (i == 2) {
+      option = prefix + "ping tower";
+    }
+    if (i == 3) {
+      option = prefix + "limpar notif";
+    }
+
+    int yOffset = y + 10 + (i - start) * 12;
+
+    if (i == scrollIndex) {
+      int16_t textWidth = display->getStringWidth(option);
+      if (textWidth > 128) {
+        if (millis() - lastScrollTime > scrollSpeed) {
+          scrollOffset++;
+          if (scrollOffset > textWidth) scrollOffset = -128;
+          lastScrollTime = millis();
+        }
+        display->drawString(x - scrollOffset, yOffset, option);
+      } else {
+        scrollOffset = 0;
+        display->drawString(x, yOffset, option);
+      }
+    } else {
+      display->drawString(x, yOffset, option);
     }
   }
 }

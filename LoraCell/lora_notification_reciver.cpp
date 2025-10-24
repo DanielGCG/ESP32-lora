@@ -74,6 +74,7 @@ void setupLoRa() {
 }
 
 void enviarMensagemLoRa(String texto) {
+  resetInactivityTimer();
   Radio.Send((uint8_t *)texto.c_str(), strlen(texto.c_str()));
   lora_idle = false;
   
@@ -160,6 +161,7 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   memcpy(rxpacket, payload, size);
   rxpacket[size] = '\0';
 
+  resetInactivityTimer();
   setloraSignalStrength(rssi, snr);
 
   String rxString = String(rxpacket);
@@ -239,6 +241,17 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
   }
 
   Radio.Rx(RX_TIMEOUT_VALUE);
+}
+
+void desligarLoRa() {
+  // Para o rádio e coloca em modo sleep
+  Radio.Standby();
+  Radio.Sleep();
+
+  // Evita interrupções pendentes
+  Radio.IrqProcess();
+
+  Serial.println("LoRa desligado.");
 }
 
 void OnRxTimeout() {

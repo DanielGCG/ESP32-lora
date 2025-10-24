@@ -1,6 +1,7 @@
 #include <time.h>
 #include "status_handler.h"
 #include "display_manager.h"
+#include "lora_notification_reciver.h"
 
 extern long long timestamp;
 
@@ -55,6 +56,47 @@ void relogio() {
     ultimoMinuto = -1;
     num_mensagem_boas_vindas = 0;
   }
+}
+
+void VextOFF() {
+  pinMode(Vext, OUTPUT);
+  digitalWrite(Vext, HIGH); // desliga Vext
+}
+
+unsigned long lastActivity = 0;
+
+void resetInactivityTimer() {
+  lastActivity = millis();
+}
+
+void enterDeepSleep() {
+  Serial.println("Inatividade >> Entrando em deep sleep");
+
+  // 1. Desliga o display
+  myDisplay.displayOff();
+
+  // 2. Desliga o lora e o Vext
+  desligarLoRa();
+  VextOFF();
+
+  // 3. Wake-up por botão (ajuste o pino conforme seu botão)
+  const gpio_num_t WAKE_PIN = GPIO_NUM_0;  
+  esp_sleep_enable_ext0_wakeup(WAKE_PIN, 0);
+
+  // 4. Deep sleep
+  esp_deep_sleep_start();
+}
+
+void requisitarHorario() {
+  enviarMensagemLoRa("!get_tower_time");
+}
+
+void requisitarPingTower() {
+  enviarMensagemLoRa("!ping_tower");
+}
+
+void requisitarNotificacoes() {
+  enviarMensagemLoRa("!req_not");
 }
 
 

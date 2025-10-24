@@ -2,6 +2,7 @@
 #include "button_handler.h"
 #include "notifications.h"
 #include "display_manager.h"
+#include "status_handler.h"
 
 #define BTN_PIN 0
 unsigned long buttonPressedTime = 0, buttonReleasedTime = 0;
@@ -79,6 +80,14 @@ void handleButtonLogic() {
       }
       ui.update();
     }
+    if (currentMenu == 2) {
+      if ((scrollIndex + 1) < 4) {
+        scrollIndex++;
+      } else {
+        scrollIndex = 0;
+      }
+      ui.update();
+    }
     buttonPressedType = NULL;
   }
 
@@ -90,13 +99,19 @@ void handleButtonLogic() {
     currentMenu = 0;
     buttonPressedType = NULL;
   }
-
+  // Lógica para clique longo
   if (buttonPressedType == 3) {
   if (currentMenu == 0) {
     if (current_FrameCount == 1) {
       // Vai para o submenu de notificações
       current_FrameCount = 0;
       currentMenu = 1;
+      ui.setFrames(&submenuNotifications[0], 1);
+    }
+    if (current_FrameCount == 2) {
+      // Vai para o submenu de requisições
+      current_FrameCount = 0;
+      currentMenu = 2;
       ui.setFrames(&submenuNotifications[0], 1);
     }
   } else if (currentMenu == 1) {
@@ -107,7 +122,7 @@ void handleButtonLogic() {
       saveNotifications();
 
       if (notifications.size() > 0) {
-        ui.setFrames(&submenuNotifications[0], 1);
+        ui.setFrames(submenuRequests, 1);
       } else {
         // Volta para o menu principal se não houver mais notificações
         currentMenu = 0;
@@ -115,6 +130,38 @@ void handleButtonLogic() {
         ui.setFrames(menus, menuAmount);
         }
       }
+    }
+    if (currentMenu == 2) {
+      if (scrollIndex == 0) {
+        scrollIndex = 0;
+        requisitarHorario();
+        currentMenu = 0;
+        current_FrameCount = 0;
+        ui.setFrames(menus, menuAmount);
+        
+      }
+      if (scrollIndex == 2) {
+        scrollIndex = 0;
+        requisitarNotificacoes();
+        currentMenu = 0;
+        current_FrameCount = 0;
+        ui.setFrames(menus, menuAmount);
+      }
+      if (scrollIndex == 3) {
+        scrollIndex = 0;
+        requisitarPingTower();
+        currentMenu = 0;
+        current_FrameCount = 0;
+        ui.setFrames(menus, menuAmount);
+      }
+      if (scrollIndex == 4){
+        scrollIndex = 0;
+        clearAllNotifications();
+        currentMenu = 0;
+        current_FrameCount = 0;
+        ui.setFrames(menus, menuAmount);
+      }
+        
     }
   buttonPressedType = NULL;  // <- Move para cá
   }
